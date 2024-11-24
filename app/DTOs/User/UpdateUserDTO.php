@@ -72,7 +72,7 @@ class UpdateUserDTO
         ?string $firstName,
         ?string $lastName,
         ?string $email,
-        ?string $password
+        ?string $password,
     ) {
         $this->userId = $userId;
         $this->userName = $userName;

@@ -31,11 +31,14 @@ class LoginDTO
     /**
      * سازنده کلاس LoginDTO.
      *
-     * @param array $data داده‌های ورودی شامل ایمیل و رمز عبور.
+     * @param string|null $email ایمیل کاربر.
+     * @param string|null $password رمز عبور کاربر.
      */
-    public function __construct($data)
-    {
-        $this->email = $data['email'] ?? null;
-        $this->password = $data['password'] ?? null;
+    public function __construct(
+        ?string $email,
+        ?string $password,
+    ) {
+        $this->email = $email;
+        $this->password = $password;
     }
 }

@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\News;
 use Exception;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Spatie\Activitylog\Models\Activity;
 
 /**
@@ -26,8 +26,8 @@ class NewsService
      * @return \Illuminate\Pagination\LengthAwarePaginator
      */
     public function getAll(
-        int $perPage = 10,
-        int $page = null,
+        int $perPage,
+        int $page,
     ) {
         $news = News::with('category')
             ->select('id', 'title', 'title_second', 'summary', 'body', 'image', 'tags', 'category_id', 'created_by')
@@ -134,7 +134,7 @@ class NewsService
      * @throws ModelNotFoundException در صورت عدم پیدا کردن خبر با شناسه مشخص شده.
      */
     public function update(
-        int $newsId,
+        int $id,
         ?string $title,
         ?int $categoryId,
         ?string $titleSecond,
@@ -146,7 +146,7 @@ class NewsService
         ?string $status,
         int $updatedBy,
     ) {
-        $news = News::findOrFail($newsId);
+        $news = News::findOrFail($id);
 
         if (request()->hasFile('image')) {
             $file = request()->file('image');
@@ -191,7 +191,7 @@ class NewsService
         $news = $this->getById($id);
 
         if (!$news) {
-            throw new Exception('news_not_found');
+            throw new ModelNotFoundException('news_not_found');
         }
 
         return $news->update(['status' => 'trashed']);
@@ -211,10 +211,12 @@ class NewsService
         $news = $this->getById($id);
 
         if (!$news) {
-            throw new Exception('news_not_found');
+            throw new ModelNotFoundException('news_not_found');
         }
 
-        return $news->update(['status' => 'published']);
+        $news->update(['status' => 'published']);
+
+        return $news->fresh();
     }
 
     /**
@@ -225,14 +227,14 @@ class NewsService
      * @return News
      * @throws Exception در صورت عدم وجود خبر یا خطا
      */
-    public function revertToRevision(int $newsId, int $revisionId): News
+    public function revertToRevision(int $id, int $revisionId): News
     {
-        $news = News::findOrFail($newsId);
+        $news = News::findOrFail($id);
 
         // پیدا کردن فعالیت مرتبط
         $activity = Activity::find($revisionId);
 
-        if (!$activity || $activity->subject_id !== $newsId) {
+        if (!$activity || $activity->subject_id !== $id) {
             throw new Exception('revision_not_found');
         }
 
@@ -243,7 +245,6 @@ class NewsService
 
             return $news; // خبر به‌روزرسانی‌ شده
         } catch (Exception $e) {
-            Log::error('Error reverting news: ' . $e->getMessage());
             throw new Exception('revert_failed');
         }
     }

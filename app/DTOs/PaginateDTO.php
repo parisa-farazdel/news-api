@@ -23,9 +23,9 @@ class PaginateDTO
     /**
      * @var int شماره صفحه برای صفحه‌بندی که باید حداکثر 255 باشد.
      */
-    #[Rules(['nullable', 'integer', 'max:255'])]
+    #[Rules(['nullable', 'integer'])]
     #[Cast(IntegerCast::class)]
-    public int $page;
+    public ?int $page;
 
     /**
      * سازنده کلاس PaginateDTO.
@@ -34,10 +34,10 @@ class PaginateDTO
      * @param int $perPage تعداد نتایج در هر صفحه.
      */
     public function __construct(
-        int $page = 1,
-        int $perPage = 10,
+        ?int $perPage = 10,
+        ?int $page = 1,
     ) {
-        $this->page = $page;
-        $this->perPage = $perPage;
+        $this->perPage = $perPage ?? 10;
+        $this->page = $page ?? 1;
     }
 }

@@ -45,7 +45,7 @@ class CreateCategoryDTO
     public function __construct(
         ?string $title,
         ?int $parentId,
-        ?string $status
+        ?string $status,
     ) {
         $this->title = $title;
         $this->parentId = $parentId;

@@ -62,7 +62,7 @@ class CreateUserDTO
         ?string $firstName,
         ?string $lastName,
         ?string $email,
-        ?string $password
+        ?string $password,
     ) {
         $this->userName = $userName;
         $this->firstName = $firstName;

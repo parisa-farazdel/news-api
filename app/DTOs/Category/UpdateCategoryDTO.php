@@ -54,7 +54,7 @@ class UpdateCategoryDTO
         int $categoryId,
         ?string $title,
         ?int $parentId,
-        ?string $status
+        ?string $status,
     ) {
         $this->categoryId = $categoryId;
         $this->title = $title;

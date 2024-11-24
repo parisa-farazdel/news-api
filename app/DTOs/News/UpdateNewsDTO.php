@@ -108,7 +108,7 @@ class UpdateNewsDTO
         ?string $body,
         ?string $image,
         ?string $tags,
-        ?string $status
+        ?string $status,
     ) {
         $this->newsId = $newsId;
         $this->title = $title;

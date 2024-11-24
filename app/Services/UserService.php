@@ -6,7 +6,6 @@ use App\Models\User;
 use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Class UserService
@@ -24,14 +23,29 @@ class UserService
      * @return \Illuminate\Pagination\LengthAwarePaginator
      */
     public function getAll(
-        int $perPage = 10,
-        int $page = null,
+        int $perPage,
+        int $page,
     ) {
         $users = User::select('id', 'role', 'username', 'first_name', 'last_name', 'email')
-            ->where('status', 'active')
+            ->where('status', 'published')
             ->paginate($perPage, ['*'], 'page', $page);
 
         return $users;
+    }
+
+    /**
+     * دریافت اطلاعات یک کاربر خاص با شناسه.
+     *
+     * @param int $userId شناسه کاربر
+     * @return User کاربر
+     */
+    public function getById(int $id)
+    {
+        $user = User::select('id', 'role', 'username', 'first_name', 'last_name', 'email')
+            ->where('status', 'published')
+            ->findOrFail($id);
+
+        return $user;
     }
 
     /**
@@ -87,15 +101,8 @@ class UserService
         $user = $this->getById($id);
 
         if (!$user) {
-            Log::error('کاربر پیدا نشد: ' . $id);
-            throw new ModelNotFoundException('User not found');
+            throw new ModelNotFoundException('user_not_found');
         }
-
-        Log::info('در حال به‌روزرسانی کاربر: ', [
-            'id' => $id,
-            'username' => $userName,
-            'email' => $email,
-        ]);
 
         $data = [
             'username' => $userName,
@@ -107,26 +114,7 @@ class UserService
 
         $user->update(array_filter($data));
 
-        Log::info('کاربر با موفقیت به‌روزرسانی شد: ' . $id);
-
-
         return $user->fresh();
-    }
-
-
-    /**
-     * دریافت اطلاعات یک کاربر خاص با شناسه.
-     *
-     * @param int $userId شناسه کاربر
-     * @return User کاربر
-     */
-    public function getById(int $id)
-    {
-        $user = User::select('id', 'role', 'username', 'first_name', 'last_name', 'email')
-            ->where('status', 'published')
-            ->findOrFail($id);
-
-        return $user;
     }
 
     /**
@@ -137,7 +125,11 @@ class UserService
      */
     public function delete(int $id)
     {
-        $user = User::where(['id' => $id])->findOrFail($id);
+        $user = User::findOrFail($id);
+
+        if (!$user) {
+            throw new ModelNotFoundException('user_not_found');
+        }
 
         return $user->update(['status' => 'trashed']);
     }
@@ -156,9 +148,11 @@ class UserService
         $user = $this->getById($id);
 
         if (!$user) {
-            throw new Exception('user_not_found');
+            throw new ModelNotFoundException('user_not_found');
         }
 
-        return $user->update(['status' => 'published']);
+        $user->update(['status' => 'published']);
+
+        return $user->fresh();
     }
 }

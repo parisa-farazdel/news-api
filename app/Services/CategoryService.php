@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\Category;
 use App\Models\News;
 use Exception;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 /**
  * کلاس CategoryService
@@ -22,8 +22,8 @@ class CategoryService
      * @return \Illuminate\Pagination\LengthAwarePaginator
      */
     public function getAll(
-        int $perPage = 10,
-        int $page = null,
+        int $perPage,
+        int $page,
     ) {
         $categories = Category::select('id', 'parent_id', 'title')
             ->where('status', 'published')
@@ -43,13 +43,13 @@ class CategoryService
      */
     public function news(
         int $categoryId,
-        int $perPage = 10,
-        int $page = null,
+        int $perPage,
+        int $page,
     ) {
         $category = Category::findOrFail($categoryId);
 
         if (!$category) {
-            throw new Exception('category not found');
+            throw new ModelNotFoundException('category_not_found');
         }
 
         $news = News::with('category')
@@ -83,17 +83,10 @@ class CategoryService
         string $status = null,
         int $createdBy,
     ): Category {
-        $user = Auth::user();
-
-        if (!$user || $user->role != 'admin') {
-            throw new Exception('unauthorized');
-        }
-
         $data = [
             'title' => $title,
             'parent_id' => $parentId,
             'status' => $status,
-            'created_by' => $user->id,
             'created_by' => $createdBy,
         ];
 
@@ -116,26 +109,18 @@ class CategoryService
      * @throws Exception در صورتی که کاربر مجاز نباشد یا دسته‌بندی پیدا نشود.
      */
     public function update(
-        int $categoryId,
+        int $id,
         ?string $title,
         ?int $parent_id,
         ?string $status,
         int $updatedBy,
     ) {
-        $user = Auth::user();
-
-        if (!$user || $user->role != 'admin') {
-            throw new Exception('unauthorized');
-        }
-
-        $category = Category::findOrFail($categoryId);
+        $category = Category::findOrFail($id);
 
         $data = [
             'title' => $title,
             'first_name' => $parent_id,
             'status' => $status,
-            'updated_by' => $user->id,
-            'updated_by' => $user->id,
             'updated_by' => $updatedBy,
         ];
 
@@ -151,15 +136,9 @@ class CategoryService
      * @return int تعداد دسته‌بندی‌های حذف شده
      * @throws Exception در صورت عدم مجوز
      */
-    public function delete(int $categoryId)
+    public function delete(int $id)
     {
-        $user = Auth::user();
-
-        if (!$user || $user->role != 'admin') {
-            throw new Exception('unauthorized');
-        }
-
-        $category = Category::where(['id' => $categoryId])->findOrFail($categoryId);
+        $category = Category::findOrFail($id);
 
         $category->update(['status' => 'trashed']);
 
@@ -174,22 +153,14 @@ class CategoryService
      * @param int $categoryId شناسه دسته‌بندی
      * @throws Exception در صورت عدم مجوز یا عدم وجود دسته‌بندی
      */
-    public function restore($categoryId)
+    public function restore($id)
     {
-        $user = Auth::user();
-
-        if (!$user || $user->role !== 'admin') {
-            throw new Exception('unauthorized');
-        }
-
-        $category = Category::withTrashed()->find($categoryId);
+        $category = Category::findOrFail($id);
 
         if (!$category) {
-            throw new Exception('category_not_found');
+            throw new ModelNotFoundException('category_not_found');
         }
 
         $category->update(['status' => 'published']);
-
-        $category->restore();
     }
 }

@@ -8,7 +8,6 @@ use App\DTOs\PaginateDTO;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiErrorResponse;
 use App\Http\Responses\ApiSuccessResponse;
-use App\Models\News;
 use App\Services\NewsService;
 use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -53,7 +52,7 @@ class NewsController extends Controller
         try {
             $news = $this->newsService->getAll($paginateDTO->perPage, $paginateDTO->page);
 
-            return new ApiSuccessResponse($news, 'success_retrieved');
+            return new ApiSuccessResponse($news);
         } catch (Exception $e) {
             return new ApiErrorResponse('failed_fetch' . $e->getMessage(), 400);
         }
@@ -71,7 +70,7 @@ class NewsController extends Controller
     {
         try {
             $news = $this->newsService->getById($id);
-            return new ApiSuccessResponse($news, 'success_retrieved');
+            return new ApiSuccessResponse($news);
         } catch (Exception $e) {
             return new ApiErrorResponse('not_found.', 404);
         }
@@ -113,7 +112,7 @@ class NewsController extends Controller
                 Auth::id(),
             );
 
-            return new ApiSuccessResponse($news, 'success_created', 201);
+            return new ApiSuccessResponse($news, 'new');
         } catch (Exception $e) {
             return new ApiErrorResponse('failed_creation' . $e->getMessage(), 400);
         }
@@ -158,7 +157,7 @@ class NewsController extends Controller
                 Auth::id(),
             );
 
-            return new ApiSuccessResponse($updatedNews, 'success_updated');
+            return new ApiSuccessResponse($updatedNews);
         } catch (ModelNotFoundException $e) {
             return new ApiErrorResponse('not_found_user', 404);
         } catch (Exception $e) {
@@ -179,7 +178,7 @@ class NewsController extends Controller
         try {
             $this->newsService->delete($id);
 
-            return new ApiSuccessResponse(null, 'success_deleted');
+            return new ApiSuccessResponse(null);
         } catch (Exception $e) {
             return new ApiErrorResponse('failed_delete', 403);
         }
@@ -193,12 +192,12 @@ class NewsController extends Controller
      * @param int $newsId شناسه خبر
      * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
      */
-    public function restore($newsId)
+    public function restore($id)
     {
         try {
-            $news = $this->newsService->restore($newsId);
+            $news = $this->newsService->restore($id);
 
-            return new ApiSuccessResponse($news, 'success_restored');
+            return new ApiSuccessResponse($news);
         } catch (Exception $e) {
             return new ApiErrorResponse('failed_restore', 403);
         }
@@ -214,14 +213,14 @@ class NewsController extends Controller
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException اگر خبری با شناسه داده شده پیدا نشود
      * @throws \Exception اگر در فرآیند بازگرداندن به نسخه قبلی مشکلی رخ دهد
      */
-    public function revert(Request $request, $newsId)
+    public function revert(Request $request, $id)
     {
         try {
             $news = $this->newsService->revertToRevision(
-                $newsId,
+                $id,
                 $request->input('revision_id'),
             );
-            return new ApiSuccessResponse($news, 'success_reverted');
+            return new ApiSuccessResponse($news);
         } catch (ModelNotFoundException $e) {
             return new ApiErrorResponse('not_found', 404);
         } catch (Exception $e) {

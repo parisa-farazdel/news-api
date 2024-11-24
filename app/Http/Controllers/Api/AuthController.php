@@ -39,7 +39,29 @@ class AuthController extends Controller
      * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
      * @throws Exception در صورت بروز خطا در فرآیند ورود
      */
-     
+    public function login(Request $request)
+    {
+        try {
+            $authDTO = new LoginDTO(
+                $request->input('email'),
+                $request->input('password'),
+            );
+
+            // ارسال درخواست به سرویس
+            $user = $this->authService->login(
+                $authDTO->email,
+                $authDTO->password
+            );
+
+            // بررسی نتیجه و ارسال پاسخ مناسب
+            if ($user) {
+                return new ApiSuccessResponse($user);
+            }
+        } catch (Exception $e) {
+            return new ApiErrorResponse('login_failed' . $e->getmessage());
+        }
+    }
+
 
     /**
      * خروج کاربر.
@@ -56,7 +78,7 @@ class AuthController extends Controller
 
             $this->authService->logout($logoutDTO);
 
-            return new ApiSuccessResponse(null, 'logout_successfully');
+            return new ApiSuccessResponse(null);
         } catch (Exception $e) {
             return new ApiErrorResponse('logout_failed' . $e->getmessage());
         }

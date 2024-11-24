@@ -41,12 +41,15 @@ class CategoryController extends Controller
      */
     public function getAll(Request $request)
     {
-        try {
-            $perPage = (int) $request->input('per_page', 10);
-            $page = (int) $request->input('page', 1);
-            $categories = $this->categoryService->getAll($perPage, $page);
+        $paginateDTO = new PaginateDTO(
+            $request->input('per_page'),
+            $request->input('page'),
+        );
 
-            return new ApiSuccessResponse($categories, 'news_retrieved_successfully');
+        try {
+            $categories = $this->categoryService->getAll($paginateDTO->perPage, $paginateDTO->page);
+
+            return new ApiSuccessResponse($categories);
         } catch (Exception $e) {
             return new ApiErrorResponse('failed_to_fetch_news' . $e->getMessage(), 400);
         }
@@ -62,14 +65,14 @@ class CategoryController extends Controller
     public function news(Request $request, $categoryId)
     {
         $paginateDTO = new PaginateDTO(
-            $request->input('per_page'),
-            $request->input('page'),
+            $request->input('per_page', 10),
+            $request->input('page', 1),
         );
 
         try {
             $news = $this->categoryService->news($categoryId, $paginateDTO->perPage, $paginateDTO->page);
 
-            return new ApiSuccessResponse($news, 'news_retrieved_successfully');
+            return new ApiSuccessResponse($news);
         } catch (Exception $e) {
             return new ApiErrorResponse('failed_to_fetch_news' . $e->getMessage(), 400);
         }
@@ -97,7 +100,7 @@ class CategoryController extends Controller
                 Auth::id(),
             );
 
-            return new ApiSuccessResponse($category, 'success_created', 201);
+            return new ApiSuccessResponse($category, 201);
         } catch (Exception $e) {
             return new ApiErrorResponse('failed_creation' . $e->getMessage(), 400);
         }
@@ -110,11 +113,11 @@ class CategoryController extends Controller
      * @param int $categoryId
      * @return ApiSuccessResponse | ApiErrorResponse
      */
-    public function update(Request $request, $categoryId): ApiSuccessResponse | ApiErrorResponse
+    public function update(Request $request, $id): ApiSuccessResponse | ApiErrorResponse
     {
         try {
             $categoryDTO = new UpdateCategoryDTO(
-                $categoryId,
+                $id,
                 $request->input('title'),
                 $request->input('parent_id'),
                 $request->input('status'),
@@ -128,7 +131,7 @@ class CategoryController extends Controller
                 Auth::id(),
             );
 
-            return new ApiSuccessResponse($updatedCategory, 'success_updated');
+            return new ApiSuccessResponse($updatedCategory);
         } catch (ModelNotFoundException $e) {
             return new ApiErrorResponse('not_found_category', 404);
         } catch (Exception $e) {
@@ -142,12 +145,12 @@ class CategoryController extends Controller
      * @param int $categoryId
      * @return ApiSuccessResponse | ApiErrorResponse
      */
-    public function destroy($categoryId)
+    public function destroy($id)
     {
         try {
-            $this->categoryService->delete($categoryId);
+            $this->categoryService->delete($id);
 
-            return new ApiSuccessResponse(null, 'success_deleted');
+            return new ApiSuccessResponse(null);
         } catch (Exception $e) {
             return new ApiErrorResponse('failed_delete', 404);
         }
@@ -159,12 +162,12 @@ class CategoryController extends Controller
      * @param int $categoryId
      * @return ApiSuccessResponse | ApiErrorResponse
      */
-    public function restore($categoryId)
+    public function restore($id)
     {
         try {
-            $news = $this->categoryService->restore($categoryId);
+            $news = $this->categoryService->restore($id);
 
-            return new ApiSuccessResponse($news, 'success_restored');
+            return new ApiSuccessResponse($news);
         } catch (Exception $e) {
             return new ApiErrorResponse('failed_restore', 403);
         }

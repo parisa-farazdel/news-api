@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Exception;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 /**
  * کلاس AuthService
@@ -36,7 +37,9 @@ class AuthService
             if ($user->status !== 'published') {
                 $this->logout($user->id); // خروج از سیستم در صورت عدم تطابق
 
-                throw new Exception('user_not_published');
+                throw ValidationException::withMessages([
+                    'status' => ['user_is_not_published'],
+                ]);
             }
 
             // ایجاد توکن برای کاربر
@@ -45,7 +48,10 @@ class AuthService
             return $token;
         }
 
-        throw new Exception('unauthorized_to_login'); // در صورت عدم موفقیت
+        // در صورت عدم موفقیت
+        throw ValidationException::withMessages([
+            'credentials' => ['Unauthorized'],
+        ]);
     }
 
     /**

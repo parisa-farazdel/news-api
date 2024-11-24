@@ -57,6 +57,26 @@ class UserController extends Controller
     }
 
     /**
+     * نمایش یک کاربر خاص.
+     *
+     * @param int $userId شناسه کاربر
+     * @return \Illuminate\Http\Response
+     */
+    public function show($id)
+    {
+        if ($id === null) {
+            $id = Auth::id();
+        }
+
+        try {
+            $user = $this->userService->getById($id);
+            return new ApiSuccessResponse($user);
+        } catch (Exception $e) {
+            return new ApiErrorResponse('failed_fetch', 404);
+        }
+    }
+
+    /**
      * ایجاد یک کاربر جدید.
      *
      * @param Request $request درخواست حاوی اطلاعات کاربر جدید
@@ -84,6 +104,46 @@ class UserController extends Controller
             return new ApiSuccessResponse($user, 201);
         } catch (Exception $e) {
             return new ApiErrorResponse('failed_registration' . $e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * به‌روزرسانی اطلاعات کاربر.
+     *
+     * @param Request $request درخواست حاوی اطلاعات جدید کاربر
+     * @param int|null $userId شناسه کاربر (اختیاری)
+     * @return ApiSuccessResponse | ApiErrorResponse
+     */
+    public function update(Request $request, $id): ApiSuccessResponse | ApiErrorResponse
+    {
+        if ($id === null) {
+            $id = Auth::id();
+        }
+
+        try {
+            $userDTO = new UpdateUserDTO(
+                $id,
+                $request->input('username'),
+                $request->input('first_name'),
+                $request->input('last_name'),
+                $request->input('email'),
+                $request->input('password'),
+            );
+
+            $updatedUser = $this->userService->update(
+                $userDTO->userId,
+                $userDTO->userName,
+                $userDTO->firstName,
+                $userDTO->lastName,
+                $userDTO->email,
+                $userDTO->password,
+            );
+
+            return new ApiSuccessResponse($updatedUser);
+        } catch (ModelNotFoundException $e) {
+            return new ApiErrorResponse('not_found_user', 404);
+        } catch (Exception $e) {
+            return new ApiErrorResponse('update_failed' . $e->getMessage(), 400);
         }
     }
 
@@ -120,78 +180,6 @@ class UserController extends Controller
             return new ApiSuccessResponse($user);
         } catch (Exception $e) {
             return new ApiErrorResponse('failed_restore', 403);
-        }
-    }
-
-    /**
-     * نمایش پروفایل کاربر احراز هویت شده.
-     *
-     * @return ApiSuccessResponse | ApiErrorResponse
-     */
-    public function showProfile()
-    {
-        $user = Auth::id();
-        try {
-            $user = $this->userService->getById($user);
-            return new ApiSuccessResponse($user, 'success_retrieved');
-        } catch (Exception $e) {
-            return new ApiErrorResponse('unauthenticated', 404);
-        }
-    }
-
-    /**
-     * نمایش یک کاربر خاص.
-     *
-     * @param int $userId شناسه کاربر
-     * @return \Illuminate\Http\Response
-     */
-    public function show($id)
-    {
-        try {
-            $user = $this->userService->getById($id);
-            return new ApiSuccessResponse($user, 'success_retrieved');
-        } catch (Exception $e) {
-            return new ApiErrorResponse('failed_fetch', 404);
-        }
-    }
-
-    /**
-     * به‌روزرسانی اطلاعات کاربر.
-     *
-     * @param Request $request درخواست حاوی اطلاعات جدید کاربر
-     * @param int|null $userId شناسه کاربر (اختیاری)
-     * @return ApiSuccessResponse | ApiErrorResponse
-     */
-    public function update(Request $request, $id): ApiSuccessResponse | ApiErrorResponse
-    {
-        if ($id === null) {
-            $id = Auth::id();
-        }
-
-        try {
-            $userDTO = new UpdateUserDTO(
-                $id,
-                $request->input('username'),
-                $request->input('first_name'),
-                $request->input('last_name'),
-                $request->input('email'),
-                $request->input('password'),
-            );
-
-            $updatedUser = $this->userService->update(
-                $userDTO->userId,
-                $userDTO->userName,
-                $userDTO->firstName,
-                $userDTO->lastName,
-                $userDTO->email,
-                $userDTO->password,
-            );
-
-            return new ApiSuccessResponse($updatedUser, 'success');
-        } catch (ModelNotFoundException $e) {
-            return new ApiErrorResponse('not_found_user', 404);
-        } catch (Exception $e) {
-            return new ApiErrorResponse('update_failed' . $e->getMessage(), 400);
         }
     }
 }
