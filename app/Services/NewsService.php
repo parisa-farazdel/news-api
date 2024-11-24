@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\News;
 use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Spatie\Activitylog\Models\Activity;
 
 /**
@@ -18,40 +19,56 @@ class NewsService
     /**
      * دریافت تمامی اخبار
      *
-     * این متد تمامی اخبار را با توجه به پارامترهای صفحه‌بندی
-     * دریافت می‌کند.
+     * این متد تمامی اخبار را با توجه به پارامترهای صفحه‌بندی 
+     * دریافت می‌کند. در صورت بروز خطا در حین دریافت اخبار، 
+     * استثنای QueryException پرتاب می‌شود.
      *
      * @param int $perPage تعداد اخبار در هر صفحه
      * @param int|null $page شماره صفحه
-     * @return \Illuminate\Pagination\LengthAwarePaginator
+     * 
+     * @return \Illuminate\Pagination\LengthAwarePaginator محتوای صفحه‌بندی شده
+     * 
+     * @throws QueryException در صورت بروز خطا در حین دریافت اخبار
      */
     public function getAll(
         int $perPage,
         int $page,
     ) {
-        $news = News::with('category')
-            ->select('id', 'title', 'title_second', 'summary', 'body', 'image', 'tags', 'category_id', 'created_by')
-            ->where('status', 'published')
-            ->paginate($perPage, ['*'], 'page', $page);
+        try {
+            $news = News::with('category')
+                ->select('id', 'title', 'title_second', 'summary', 'body', 'image', 'tags', 'category_id', 'created_by')
+                ->where('status', 'published')
+                ->paginate($perPage, ['*'], 'page', $page);
 
-        return $news;
+            return $news;
+        } catch (QueryException $e) {
+            throw new Exception('error_to_fetch: ' . $e->getMessage());
+        }
     }
 
     /**
      * دریافت یک خبر با شناسه مشخص
      *
      * این متد خبر با شناسه مشخص را از پایگاه داده دریافت می‌کند.
+     * در صورت عدم وجود خبر با شناسه مشخص، استثنای ModelNotFoundException پرتاب می‌شود.
      *
      * @param int $newsId شناسه خبر
+     * 
      * @return News
+     * 
+     * @throws ModelNotFoundException در صورت عدم وجود خبر
      */
     public function getById(int $id)
     {
-        $news = News::select('id', 'title', 'title_second', 'summary', 'body', 'image', 'tags', 'category_id', 'created_by')
-            ->where('status', 'published')
-            ->findOrFail($id);
+        try {
+            $news = News::select('id', 'title', 'title_second', 'summary', 'body', 'image', 'tags', 'category_id', 'created_by')
+                ->where('status', 'published')
+                ->findOrFail($id);
 
-        return $news;
+            return $news;
+        } catch (ModelNotFoundException $e) {
+            throw new Exception('news_not_found: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -72,7 +89,7 @@ class NewsService
      *
      * @return News خبر جدید ایجاد شده.
      *
-     * @throws Exception در صورت بروز خطا در ذخیره‌سازی.
+     * @throws QueryException در صورت بروز خطا در ذخیره‌سازی.
      */
     public function store(
         ?string $title,
@@ -86,30 +103,34 @@ class NewsService
         ?string $status = null,
         int $createdBy,
     ): News {
-        if (request()->hasFile('image')) {
-            $file = request()->file('image');
-            $extension = $file->getClientOriginalExtension(); // پسوند فایل
-            $newFileName = 'image_' . time() . '_' . uniqid() . '.' . $extension; // نام جدید
-            $file->move(public_path('uploads'), $newFileName); // ذخیره با نام جدید
-            $image = $newFileName; // نام جدید تصویر
-        } else {
-            $image = null; // در صورت عدم وجود تصویر
+        try {
+            if (request()->hasFile('image')) {
+                $file = request()->file('image');
+                $extension = $file->getClientOriginalExtension(); // پسوند فایل
+                $newFileName = 'image_' . time() . '_' . uniqid() . '.' . $extension; // نام جدید
+                $file->move(public_path('uploads'), $newFileName); // ذخیره با نام جدید
+                $image = $newFileName; // نام جدید تصویر
+            } else {
+                $image = null; // در صورت عدم وجود تصویر
+            }
+
+            $data = [
+                'title' => $title,
+                'category_id' => $categoryId,
+                'title_second' => $titleSecond,
+                'slug' => $slug,
+                'summary' => $summary,
+                'body' => $body,
+                'image' => $image,
+                'tags' => $tags,
+                'status' => $status,
+                'created_by' => $createdBy,
+            ];
+
+            return News::create(array_filter($data));
+        } catch (QueryException $e) {
+            throw new Exception('error_saving_news: ' . $e->getMessage());
         }
-
-        $data = [
-            'title' => $title,
-            'category_id' => $categoryId,
-            'title_second' => $titleSecond,
-            'slug' => $slug,
-            'summary' => $summary,
-            'body' => $body,
-            'image' => $image,
-            'tags' => $tags,
-            'status' => $status,
-            'created_by' => $createdBy,
-        ];
-
-        return News::create(array_filter($data));
     }
 
     /**
@@ -132,6 +153,7 @@ class NewsService
      * @return News خبر به‌روزرسانی شده.
      *
      * @throws ModelNotFoundException در صورت عدم پیدا کردن خبر با شناسه مشخص شده.
+     * @throws QueryException در صورت بروز خطا در حین به‌روزرسانی.
      */
     public function update(
         int $id,
@@ -146,77 +168,90 @@ class NewsService
         ?string $status,
         int $updatedBy,
     ) {
-        $news = News::findOrFail($id);
+        try {
+            $news = News::findOrFail($id);
 
-        if (request()->hasFile('image')) {
-            $file = request()->file('image');
-            $extension = $file->getClientOriginalExtension(); // پسوند فایل
-            $newFileName = 'image_' . time() . '_' . uniqid() . '.' . $extension; // نام جدید
+            if (request()->hasFile('image')) {
+                $file = request()->file('image');
+                $extension = $file->getClientOriginalExtension(); // پسوند فایل
+                $newFileName = 'image_' . time() . '_' . uniqid() . '.' . $extension; // نام جدید
 
-            // ذخیره فایل در public/uploads
-            $file->move(public_path('uploads'), $newFileName);
-            $image = $newFileName; // به‌روزرسانی تصویر
+                // ذخیره فایل در public/uploads
+                $file->move(public_path('uploads'), $newFileName);
+                $image = $newFileName; // به‌روزرسانی تصویر
+            }
+
+            $data = [
+                'title' => $title,
+                'category_id' => $categoryId,
+                'title_second' => $titleSecond,
+                'slug' => $slug,
+                'summary' => $summary,
+                'body' => $body,
+                'image' => $image,
+                'tags' => $tags,
+                'status' => $status,
+                'updated_by' => $updatedBy,
+            ];
+
+            $news->update(array_filter($data));
+
+            return $news->fresh();
+        } catch (ModelNotFoundException $e) {
+            throw new ModelNotFoundException('not_found_news: ' . $e->getMessage());
+        } catch (QueryException $e) {
+            throw new Exception('error_update_news: ' . $e->getMessage());
         }
-
-        $data = [
-            'title' => $title,
-            'category_id' => $categoryId,
-            'title_second' => $titleSecond,
-            'slug' => $slug,
-            'summary' => $summary,
-            'body' => $body,
-            'image' => $image,
-            'tags' => $tags,
-            'status' => $status,
-            'updated_by' => $updatedBy,
-        ];
-
-        $news->update(array_filter($data));
-
-        return $news->fresh();
     }
 
     /**
      * حذف یک خبر با شناسه مشخص
      *
      * این متد خبر با شناسه مشخص را از پایگاه داده حذف می‌کند.
-     * تنها کاربران با نقش 'admin' مجاز به حذف اخبار هستند.
      *
      * @param int $newsId شناسه خبر
      * @return bool
-     * @throws Exception در صورت عدم مجوز کاربر
+     * @throws ModelNotFoundException در صورت عدم وجود خبر
+     * @throws QueryException در صورت عدم مجوز کاربر
      */
     public function delete(int $id)
     {
-        $news = $this->getById($id);
+        try {
+            $news = $this->getById($id);
 
-        if (!$news) {
-            throw new ModelNotFoundException('news_not_found');
+            if (!$news) {
+                throw new ModelNotFoundException('not_found_news');
+            }
+
+            return $news->update(['status' => 'trashed']);
+        } catch (QueryException $e) {
+            throw new Exception('error_delete_news: ' . $e->getMessage());
         }
-
-        return $news->update(['status' => 'trashed']);
     }
 
     /**
      * بازیابی یک خبر حذف‌شده
      *
      * این متد خبر با شناسه مشخص را بازیابی می‌کند.
-     * تنها کاربران با نقش 'admin' مجاز به بازیابی اخبار هستند.
      *
      * @param int $newsId شناسه خبر
-     * @throws Exception در صورت عدم مجوز کاربر
+     * 
+     * @throws ModelNotFoundException در صورت عدم وجود خبر
+     * @throws QueryException در صورت عدم مجوز کاربر
      */
     public function restore($id)
     {
-        $news = $this->getById($id);
+        try {
+            $news = $this->getById($id);
 
-        if (!$news) {
-            throw new ModelNotFoundException('news_not_found');
+            if (!$news) {
+                throw new ModelNotFoundException('خبر پیدا نشد.');
+            }
+
+            $news->update(['status' => 'published']);
+        } catch (QueryException $e) {
+            throw new Exception('error_restore_news: ' . $e->getMessage());
         }
-
-        $news->update(['status' => 'published']);
-
-        return $news->fresh();
     }
 
     /**
@@ -224,7 +259,9 @@ class NewsService
      *
      * @param int $newsId شناسه خبر
      * @param int $revisionId شناسه فعالیت
+     * 
      * @return News
+     * 
      * @throws Exception در صورت عدم وجود خبر یا خطا
      */
     public function revertToRevision(int $id, int $revisionId): News
@@ -245,7 +282,7 @@ class NewsService
 
             return $news; // خبر به‌روزرسانی‌ شده
         } catch (Exception $e) {
-            throw new Exception('revert_failed');
+            throw new Exception('revert_failed: ' . $e->getMessage());
         }
     }
 }

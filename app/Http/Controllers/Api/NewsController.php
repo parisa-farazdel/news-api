@@ -72,7 +72,7 @@ class NewsController extends Controller
             $news = $this->newsService->getById($id);
             return new ApiSuccessResponse($news);
         } catch (Exception $e) {
-            return new ApiErrorResponse('not_found.', 404);
+            return new ApiErrorResponse('not_found', 404);
         }
     }
 
