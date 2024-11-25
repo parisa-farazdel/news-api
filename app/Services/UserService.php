@@ -207,7 +207,7 @@ class UserService
             $user->update(['status' => 'published']);
 
             return $user->fresh();
-        } catch (Exception $e) {
+        } catch (QueryException $e) {
             throw new Exception('error_restore_user: ' . $e->getMessage());
         }
     }

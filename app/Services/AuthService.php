@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Support\Facades\Auth;

@@ -11,14 +11,14 @@ use App\Http\Responses\ApiSuccessResponse;
 use App\Services\UserService;
 use Exception;
 use Illuminate\Http\Request;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * Class UserController
- * 
- * این کلاس شامل متدهایی برای مدیریت کاربران است.
- * متدها شامل ایجاد، دریافت، بروزرسانی و حذف کاربران می‌باشند.
+ * کنترلر مربوط به کاربران.
+ *
+ * این کلاس مسئول مدیریت عملیات مربوط به کاربران از قبیل
+ * دریافت، ایجاد، به‌روزرسانی، حذف و بازیابی کاربران است.
  */
 class UserController extends Controller
 {
@@ -35,10 +35,16 @@ class UserController extends Controller
     }
 
     /**
-     * دریافت لیست کاربران.
+     * دریافت تمام کاربران.
      *
-     * @param Request $request درخواست حاوی پارامترهای جستجو
-     * @return ApiSuccessResponse | ApiErrorResponse
+     * این متد تمامی کاربران را با توجه به پارامترهای صفحه‌بندی
+     * از سرویس کاربران دریافت کرده و آن‌ها را برمی‌گرداند.
+     *
+     * @param Request $request اطلاعات درخواست شامل پارامترهای صفحه‌بندی
+     * 
+     * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
+     * 
+     * @throws Exception در صورت بروز خطا در فرآیند دریافت کاربران
      */
     public function getAll(Request $request)
     {
@@ -50,17 +56,24 @@ class UserController extends Controller
         try {
             $users = $this->userService->getAll($paginateDTO->perPage, $paginateDTO->page);
 
-            return new ApiSuccessResponse($users);
-        } catch (Exception $e) {
-            return new ApiErrorResponse('failed_fetch' . $e->getMessage(), 400);
+            return new ApiSuccessResponse($users, 'fetch_success');
+        } catch (Exception $exception) {
+            return new ApiErrorResponse('fetch_error', $exception);
         }
     }
 
     /**
-     * نمایش یک کاربر خاص.
+     * نمایش اطلاعات یک کاربر.
      *
-     * @param int $userId شناسه کاربر
-     * @return \Illuminate\Http\Response
+     * این متد اطلاعات کاربر مشخص شده را بر اساس شناسه دریافت کرده و
+     * آن را برمی‌گرداند. در صورت عدم وجود شناسه، اطلاعات کاربر
+     * جاری را برمی‌گرداند.
+     *
+     * @param int|null $id شناسه کاربر (اختیاری)
+     * 
+     * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
+     * 
+     * @throws Exception در صورت بروز خطا در فرآیند دریافت کاربر
      */
     public function show($id)
     {
@@ -70,17 +83,23 @@ class UserController extends Controller
 
         try {
             $user = $this->userService->getById($id);
-            return new ApiSuccessResponse($user);
-        } catch (Exception $e) {
-            return new ApiErrorResponse('failed_fetch', 404);
+            return new ApiSuccessResponse($user, 'fetch_success');
+        } catch (Exception $exception) {
+            return new ApiErrorResponse('fetch_error', $exception);
         }
     }
 
     /**
      * ایجاد یک کاربر جدید.
      *
-     * @param Request $request درخواست حاوی اطلاعات کاربر جدید
-     * @return ApiSuccessResponse | ApiErrorResponse
+     * این متد اطلاعات کاربر جدید را از درخواست دریافت کرده و
+     * آن را به سرویس کاربران ارسال می‌کند تا ذخیره شود.
+     *
+     * @param Request $request اطلاعات درخواست 
+     * 
+     * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
+     * 
+     * @throws Exception در صورت بروز خطا در فرآیند ایجاد کاربر
      */
     public function create(Request $request)
     {
@@ -101,18 +120,24 @@ class UserController extends Controller
                 $userDTO->password,
             );
 
-            return new ApiSuccessResponse($user, 201);
-        } catch (Exception $e) {
-            return new ApiErrorResponse('failed_registration' . $e->getMessage(), 400);
+            return new ApiSuccessResponse($user, 'create_success', Response::HTTP_CREATED);
+        } catch (Exception $exception) {
+            return new ApiErrorResponse('create_error', $exception);
         }
     }
 
     /**
-     * به‌روزرسانی اطلاعات کاربر.
+     * به‌روزرسانی اطلاعات یک کاربر موجود.
      *
-     * @param Request $request درخواست حاوی اطلاعات جدید کاربر
-     * @param int|null $userId شناسه کاربر (اختیاری)
-     * @return ApiSuccessResponse | ApiErrorResponse
+     * این متد اطلاعات جدید کاربر را از درخواست دریافت کرده و
+     * آن را به سرویس کاربران ارسال می‌کند تا به‌روزرسانی شود.
+     *
+     * @param Request $request اطلاعات درخواست 
+     * @param int|null $id شناسه کاربر (اختیاری)
+     * 
+     * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
+     * 
+     * @throws Exception در صورت بروز خطا در فرآیند به‌روزرسانی کاربر
      */
     public function update(Request $request, $id): ApiSuccessResponse | ApiErrorResponse
     {
@@ -139,47 +164,54 @@ class UserController extends Controller
                 $userDTO->password,
             );
 
-            return new ApiSuccessResponse($updatedUser);
-        } catch (ModelNotFoundException $e) {
-            return new ApiErrorResponse('not_found_user', 404);
-        } catch (Exception $e) {
-            return new ApiErrorResponse('update_failed' . $e->getMessage(), 400);
+            return new ApiSuccessResponse($updatedUser, 'update_success');
+        } catch (Exception $exception) {
+            return new ApiErrorResponse('update_error', $exception);
         }
     }
 
     /**
      * حذف یک کاربر.
      *
-     * @param int $userId شناسه کاربر
-     * @return ApiSuccessResponse | ApiErrorResponse
+     * این متد شناسه کاربر را دریافت کرده و آن را از سیستم حذف می‌کند.
+     *
+     * @param int $id شناسه کاربر
+     * 
+     * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
+     * 
+     * @throws Exception در صورت بروز خطا در فرآیند حذف کاربر
      */
     public function destroy($id)
     {
         try {
             $this->userService->delete($id);
 
-            return new ApiSuccessResponse(null);
-        } catch (Exception $e) {
-            return new ApiErrorResponse('failed_delete', 404);
+            return new ApiSuccessResponse(null, 'delete_success');
+        } catch (Exception $exception) {
+            return new ApiErrorResponse('delete_error', $exception);
         }
     }
 
     /**
-     * بازیابی یک کاربر حذف‌شده
+     * بازیابی یک کاربر حذف شده.
      *
-     * این متد کاربر با شناسه مشخص را بازیابی می‌کند.
+     * این متد شناسه کاربر را دریافت کرده و آن را از حالت حذف
+     * بازیابی می‌کند.
      *
      * @param int $id شناسه کاربر
+     * 
      * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
+     * 
+     * @throws Exception در صورت بروز خطا در فرآیند بازیابی کاربر
      */
     public function restore($id)
     {
         try {
             $user = $this->userService->restore($id);
 
-            return new ApiSuccessResponse($user);
-        } catch (Exception $e) {
-            return new ApiErrorResponse('failed_restore', 403);
+            return new ApiSuccessResponse($user, 'restore_success');
+        } catch (Exception $exception) {
+            return new ApiErrorResponse('restore_error', $exception);
         }
     }
 }

@@ -11,7 +11,7 @@ use App\Http\Responses\ApiSuccessResponse;
 use Illuminate\Http\Request;
 use App\Services\CategoryService;
 use Exception;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -23,21 +23,23 @@ class CategoryController extends Controller
 {
     protected $categoryService;
 
-    /**
-     * CategoryController متد سازنده.
-     *
-     * @param CategoryService $categoryService
-     */
+
     public function __construct(CategoryService $categoryService)
     {
         $this->categoryService = $categoryService;
     }
 
     /**
-     * دریافت همه دسته‌بندی‌ها.
+     * دریافت تمام دسته‌بندی‌ها.
      *
-     * @param Request $request
-     * @return ApiSuccessResponse | ApiErrorResponse
+     * این متد تمامی دسته‌بندی‌ها را با توجه به پارامترهای صفحه‌بندی
+     * از سرویس دسته‌بندی دریافت کرده و آن‌ها را برمی‌گرداند.
+     *
+     * @param Request $request اطلاعات درخواست شامل پارامترهای صفحه‌بندی
+     * 
+     * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
+     * 
+     * @throws Exception در صورت بروز خطا در فرآیند دریافت دسته‌بندی‌ها
      */
     public function getAll(Request $request)
     {
@@ -49,18 +51,24 @@ class CategoryController extends Controller
         try {
             $categories = $this->categoryService->getAll($paginateDTO->perPage, $paginateDTO->page);
 
-            return new ApiSuccessResponse($categories);
-        } catch (Exception $e) {
-            return new ApiErrorResponse('failed_to_fetch_news' . $e->getMessage(), 400);
+            return new ApiSuccessResponse($categories, 'fetch_success');
+        } catch (Exception $exception) {
+            return new ApiErrorResponse('fetch_error', $exception);
         }
     }
 
     /**
      * دریافت اخبار مربوط به یک دسته‌بندی خاص.
      *
-     * @param Request $request
-     * @param int $categoryId
-     * @return ApiSuccessResponse | ApiErrorResponse
+     * این متد اخبار مرتبط با شناسه دسته‌بندی مشخص شده را با توجه به
+     * پارامترهای صفحه‌بندی دریافت کرده و برمی‌گرداند.
+     *
+     * @param Request $request اطلاعات درخواست شامل پارامترهای صفحه‌بندی
+     * @param int $categoryId شناسه دسته‌بندی
+     * 
+     * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
+     * 
+     * @throws Exception در صورت بروز خطا در فرآیند دریافت اخبار
      */
     public function news(Request $request, $categoryId)
     {
@@ -72,17 +80,23 @@ class CategoryController extends Controller
         try {
             $news = $this->categoryService->news($categoryId, $paginateDTO->perPage, $paginateDTO->page);
 
-            return new ApiSuccessResponse($news);
-        } catch (Exception $e) {
-            return new ApiErrorResponse('failed_to_fetch_news' . $e->getMessage(), 400);
+            return new ApiSuccessResponse($news, 'fetch_success');
+        } catch (Exception $exception) {
+            return new ApiErrorResponse('fetch_error', $exception);
         }
     }
 
     /**
      * ایجاد یک دسته‌بندی جدید.
      *
-     * @param Request $request
-     * @return ApiSuccessResponse | ApiErrorResponse
+     * این متد اطلاعات دسته‌بندی جدید را از درخواست دریافت کرده و
+     * آن را به سرویس دسته‌بندی ارسال می‌کند تا ذخیره شود.
+     *
+     * @param Request $request اطلاعات درخواست شامل عنوان، شناسه والد و وضعیت
+     * 
+     * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
+     * 
+     * @throws Exception در صورت بروز خطا در فرآیند ایجاد دسته‌بندی
      */
     public function create(Request $request)
     {
@@ -100,18 +114,24 @@ class CategoryController extends Controller
                 Auth::id(),
             );
 
-            return new ApiSuccessResponse($category, 201);
-        } catch (Exception $e) {
-            return new ApiErrorResponse('failed_creation' . $e->getMessage(), 400);
+            return new ApiSuccessResponse($category, 'create_success', Response::HTTP_CREATED);
+        } catch (Exception $exception) {
+            return new ApiErrorResponse('create_error', $exception);
         }
     }
 
     /**
      * به‌روزرسانی یک دسته‌بندی موجود.
      *
-     * @param Request $request
-     * @param int $categoryId
-     * @return ApiSuccessResponse | ApiErrorResponse
+     * این متد اطلاعات جدید دسته‌بندی را از درخواست دریافت کرده و
+     * آن را به سرویس دسته‌بندی ارسال می‌کند تا به‌روزرسانی شود.
+     *
+     * @param Request $request اطلاعات درخواست شامل عنوان، شناسه والد و وضعیت
+     * @param int $id شناسه دسته‌بندی
+     * 
+     * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
+     * 
+     * @throws Exception در صورت بروز خطا در فرآیند به‌روزرسانی دسته‌بندی
      */
     public function update(Request $request, $id): ApiSuccessResponse | ApiErrorResponse
     {
@@ -131,45 +151,54 @@ class CategoryController extends Controller
                 Auth::id(),
             );
 
-            return new ApiSuccessResponse($updatedCategory);
-        } catch (ModelNotFoundException $e) {
-            return new ApiErrorResponse('not_found_category', 404);
-        } catch (Exception $e) {
-            return new ApiErrorResponse('update_failed' . $e->getMessage(), 400);
+            return new ApiSuccessResponse($updatedCategory, 'update_success');
+        } catch (Exception $exception) {
+            return new ApiErrorResponse('update_error', $exception);
         }
     }
 
     /**
      * حذف یک دسته‌بندی.
      *
-     * @param int $categoryId
-     * @return ApiSuccessResponse | ApiErrorResponse
+     * این متد شناسه دسته‌بندی را دریافت کرده و آن را از سیستم حذف می‌کند.
+     *
+     * @param int $id شناسه دسته‌بندی
+     * 
+     * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
+     * 
+     * @throws Exception در صورت بروز خطا در فرآیند حذف دسته‌بندی
      */
     public function destroy($id)
     {
         try {
             $this->categoryService->delete($id);
 
-            return new ApiSuccessResponse(null);
-        } catch (Exception $e) {
-            return new ApiErrorResponse('failed_delete', 404);
+            return new ApiSuccessResponse(null, 'delete_success');
+        } catch (Exception $exception) {
+            return new ApiErrorResponse('delete_error', $exception);
         }
     }
 
     /**
      * بازیابی یک دسته‌بندی حذف شده.
      *
-     * @param int $categoryId
-     * @return ApiSuccessResponse | ApiErrorResponse
+     * این متد شناسه دسته‌بندی را دریافت کرده و آن را از حالت حذف
+     * بازیابی می‌کند.
+     *
+     * @param int $id شناسه دسته‌بندی
+     * 
+     * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
+     * 
+     * @throws Exception در صورت بروز خطا در فرآیند بازیابی دسته‌بندی
      */
     public function restore($id)
     {
         try {
             $news = $this->categoryService->restore($id);
 
-            return new ApiSuccessResponse($news);
-        } catch (Exception $e) {
-            return new ApiErrorResponse('failed_restore', 403);
+            return new ApiSuccessResponse($news, 'restore_success');
+        } catch (Exception $exception) {
+            return new ApiErrorResponse('restore_error', $exception);
         }
     }
 }

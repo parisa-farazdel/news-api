@@ -10,8 +10,8 @@ use App\Http\Responses\ApiErrorResponse;
 use App\Http\Responses\ApiSuccessResponse;
 use App\Services\NewsService;
 use Exception;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -35,12 +35,16 @@ class NewsController extends Controller
     }
 
     /**
-     * دریافت تمامی اخبار
+     * دریافت تمام اخبار.
      *
-     * این متد تمامی اخبار را با توجه به پارامترهای صفحه‌بندی دریافت می‌کند.
+     * این متد تمامی اخبار را با توجه به پارامترهای صفحه‌بندی
+     * از سرویس اخبار دریافت کرده و آن‌ها را برمی‌گرداند.
      *
-     * @param Request $request درخواست HTTP
+     * @param Request $request اطلاعات درخواست شامل پارامترهای صفحه‌بندی
+     * 
      * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
+     * 
+     * @throws Exception در صورت بروز خطا در فرآیند دریافت اخبار
      */
     public function getAll(Request $request)
     {
@@ -52,37 +56,45 @@ class NewsController extends Controller
         try {
             $news = $this->newsService->getAll($paginateDTO->perPage, $paginateDTO->page);
 
-            return new ApiSuccessResponse($news);
-        } catch (Exception $e) {
-            return new ApiErrorResponse('failed_fetch' . $e->getMessage(), 400);
+            return new ApiSuccessResponse($news, 'fetch_success');
+        } catch (Exception $exception) {
+            return new ApiErrorResponse('fetch_error', $exception);
         }
     }
 
     /**
-     * نمایش یک خبر خاص
+     * نمایش اخبار بر اساس شناسه.
      *
-     * این متد خبر با شناسه مشخص را نمایش می‌دهد.
+     * این متد خبر مشخص شده را بر اساس شناسه دریافت کرده و
+     * آن را برمی‌گرداند.
      *
-     * @param int $newsId شناسه خبر
+     * @param int $id شناسه خبر
+     * 
      * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
+     * 
+     * @throws Exception در صورت بروز خطا در فرآیند دریافت خبر
      */
     public function show(int $id)
     {
         try {
             $news = $this->newsService->getById($id);
-            return new ApiSuccessResponse($news);
-        } catch (Exception $e) {
-            return new ApiErrorResponse('not_found', 404);
+            return new ApiSuccessResponse($news, 'fetch_success');
+        } catch (Exception $exception) {
+            return new ApiErrorResponse('fetch_error', $exception);
         }
     }
 
     /**
-     * ایجاد یک خبر جدید
+     * ایجاد یک خبر جدید.
      *
-     * این متد یک خبر جدید را بر اساس اطلاعات دریافتی از کاربر ایجاد می‌کند.
+     * این متد اطلاعات خبر جدید را از درخواست دریافت کرده و
+     * آن را به سرویس اخبار ارسال می‌کند تا ذخیره شود.
      *
-     * @param Request $request درخواست HTTP
+     * @param Request $request اطلاعات درخواست 
+     * 
      * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
+     * 
+     * @throws Exception در صورت بروز خطا در فرآیند ایجاد خبر
      */
     public function create(Request $request)
     {
@@ -112,20 +124,24 @@ class NewsController extends Controller
                 Auth::id(),
             );
 
-            return new ApiSuccessResponse($news, 'new');
-        } catch (Exception $e) {
-            return new ApiErrorResponse('failed_creation' . $e->getMessage(), 400);
+            return new ApiSuccessResponse($news, 'create_success', Response::HTTP_CREATED);
+        } catch (Exception $exception) {
+            return new ApiErrorResponse('create_error', $exception);
         }
     }
 
     /**
-     * به‌روزرسانی یک خبر 
+     * به‌روزرسانی یک خبر موجود.
      *
-     * این متد اطلاعات خبر با شناسه مشخص را به‌روزرسانی می‌کند.
+     * این متد اطلاعات جدید خبر را از درخواست دریافت کرده و
+     * آن را به سرویس اخبار ارسال می‌کند تا به‌روزرسانی شود.
      *
-     * @param Request $request درخواست HTTP
+     * @param Request $request اطلاعات درخواست
      * @param int $newsId شناسه خبر
+     * 
      * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
+     * 
+     * @throws Exception در صورت بروز خطا در فرآیند به‌روزرسانی خبر
      */
     public function update(Request $request, $newsId): ApiSuccessResponse | ApiErrorResponse
     {
@@ -157,61 +173,69 @@ class NewsController extends Controller
                 Auth::id(),
             );
 
-            return new ApiSuccessResponse($updatedNews);
-        } catch (ModelNotFoundException $e) {
-            return new ApiErrorResponse('not_found_user', 404);
-        } catch (Exception $e) {
-            return new ApiErrorResponse('update_failed' . $e->getMessage(), 400);
+            return new ApiSuccessResponse($updatedNews, 'update_success');
+        } catch (Exception $exception) {
+            return new ApiErrorResponse('update_error', $exception);
         }
     }
 
     /**
-     * حذف یک خبر
+     * حذف یک خبر.
      *
-     * این متد خبر با شناسه مشخص را حذف می‌کند.
+     * این متد شناسه خبر را دریافت کرده و آن را از سیستم حذف می‌کند.
      *
-     * @param int $newsId شناسه خبر
+     * @param int $id شناسه خبر
+     * 
      * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
+     * 
+     * @throws Exception در صورت بروز خطا در فرآیند حذف خبر
      */
     public function destroy($id)
     {
         try {
             $this->newsService->delete($id);
 
-            return new ApiSuccessResponse(null);
-        } catch (Exception $e) {
-            return new ApiErrorResponse('failed_delete', 403);
+            return new ApiSuccessResponse(null, 'delete_success');
+        } catch (Exception $exception) {
+            return new ApiErrorResponse('delete_error', $exception);
         }
     }
 
     /**
-     * بازیابی یک خبر حذف‌شده
+     * بازیابی یک خبر حذف شده.
      *
-     * این متد خبر با شناسه مشخص را بازیابی می‌کند.
+     * این متد شناسه خبر را دریافت کرده و آن را از حالت حذف
+     * بازیابی می‌کند.
      *
-     * @param int $newsId شناسه خبر
+     * @param int $id شناسه خبر
+     * 
      * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
+     * 
+     * @throws Exception در صورت بروز خطا در فرآیند بازیابی خبر
      */
     public function restore($id)
     {
         try {
             $news = $this->newsService->restore($id);
 
-            return new ApiSuccessResponse($news);
-        } catch (Exception $e) {
-            return new ApiErrorResponse('failed_restore', 403);
+            return new ApiSuccessResponse($news, 'restore_success');
+        } catch (Exception $exception) {
+            return new ApiErrorResponse('restore_error', $exception);
         }
     }
 
     /**
-     * بازگرداندن یک خبر به نسخه‌ای از قبل
+     * بازگشت به نسخه قبلی یک خبر.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $newsId شناسه خبری که قرار است به نسخه قبلی بازگردانده شود
-     * @return \App\Http\Resources\ApiSuccessResponse|\App\Http\Resources\ApiErrorResponse
+     * این متد شناسه خبر و شناسه نسخه را دریافت کرده و
+     * خبر را به نسخه قبلی خود برمی‌گرداند.
      *
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException اگر خبری با شناسه داده شده پیدا نشود
-     * @throws \Exception اگر در فرآیند بازگرداندن به نسخه قبلی مشکلی رخ دهد
+     * @param Request $request اطلاعات درخواست شامل شناسه نسخه
+     * @param int $id شناسه خبر
+     * 
+     * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
+     * 
+     * @throws Exception در صورت بروز خطا در فرآیند بازگشت به نسخه
      */
     public function revert(Request $request, $id)
     {
@@ -220,11 +244,9 @@ class NewsController extends Controller
                 $id,
                 $request->input('revision_id'),
             );
-            return new ApiSuccessResponse($news);
-        } catch (ModelNotFoundException $e) {
-            return new ApiErrorResponse('not_found', 404);
-        } catch (Exception $e) {
-            return new ApiErrorResponse('failed_revert' . $e->getMessage(), 403);
+            return new ApiSuccessResponse($news, 'revert_success');
+        } catch (Exception $exception) {
+            return new ApiErrorResponse('revert_error', $exception);
         }
     }
 }

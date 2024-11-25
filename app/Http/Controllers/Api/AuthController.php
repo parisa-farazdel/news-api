@@ -33,10 +33,15 @@ class AuthController extends Controller
     }
 
     /**
-     * ورود کاربر با استفاده از اطلاعات درخواست.
+     * ورود کاربر به سیستم.
+     *
+     * این متد اطلاعات ورود کاربر را از درخواست دریافت کرده و 
+     * با استفاده از سرویس احراز هویت، کاربر را وارد سیستم می‌کند.
      *
      * @param Request $request اطلاعات درخواست شامل ایمیل و رمز عبور
+     * 
      * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
+     * 
      * @throws Exception در صورت بروز خطا در فرآیند ورود
      */
     public function login(Request $request)
@@ -55,18 +60,22 @@ class AuthController extends Controller
 
             // بررسی نتیجه و ارسال پاسخ مناسب
             if ($user) {
-                return new ApiSuccessResponse($user);
+                return new ApiSuccessResponse($user, 'login_success');
             }
-        } catch (Exception $e) {
-            return new ApiErrorResponse('login_failed' . $e->getmessage());
+        } catch (Exception $exception) {
+            return new ApiErrorResponse('login_error', $exception);
         }
     }
 
 
     /**
-     * خروج کاربر.
+     * خروج کاربر از سیستم.
+     *
+     * این متد کاربر فعلی را از سیستم خارج می‌کند و 
+     * با استفاده از سرویس احراز هویت، عملیات خروج را انجام می‌دهد.
      *
      * @return ApiSuccessResponse|ApiErrorResponse پاسخ موفق یا خطا
+     * 
      * @throws Exception در صورت بروز خطا در فرآیند خروج
      */
     public function logout()
@@ -78,9 +87,9 @@ class AuthController extends Controller
 
             $this->authService->logout($logoutDTO);
 
-            return new ApiSuccessResponse(null);
-        } catch (Exception $e) {
-            return new ApiErrorResponse('logout_failed' . $e->getmessage());
+            return new ApiSuccessResponse(null, 'logout_success');
+        } catch (Exception $exception) {
+            return new ApiErrorResponse('logout_error', $exception);
         }
     }
 }
